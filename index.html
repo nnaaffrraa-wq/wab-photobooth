@@ -1,0 +1,366 @@
+<html>
+<head>
+  <style>
+    body {
+      background: #cfe8ff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .container {
+      text-align: center;
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      width: 900px;
+      position: relative;
+    }
+
+    h1 {
+      color: #1a4ca0;
+      margin-bottom: 15px;
+    }
+
+    .video-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    video {
+      border: 4px solid #1a4ca0;
+      border-radius: 10px;
+      width: 640px;
+      height: 480px;
+      transition: filter 0.3s, transform 0.3s;
+      background-color: black;
+    }
+
+    #countdown {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 100px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 0 0 20px rgba(0,0,0,0.7);
+      display: none;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .controls {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .controls input, .controls select {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #aaa;
+      font-size: 14px;
+    }
+
+    .controls button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      background: #1a4ca0;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.3s;
+    }
+
+    .controls button:hover {
+      background: #316ad5;
+    }
+
+    #framePreview {
+      width: 100px;
+      height: 50px;
+      border: 2px solid #1a4ca0;
+      border-radius: 8px;
+      margin-left: 5px;
+    }
+
+    #photos {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 25px;
+      gap: 15px;
+    }
+
+    .photo {
+      background: #f7fbff;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      padding: 10px;
+      position: relative;
+      width: 180px;
+    }
+
+    .photo img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 2px solid #1a4ca0;
+    }
+
+    .photo button {
+      margin-top: 8px;
+      padding: 5px 10px;
+      background: #1a4ca0;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .photo button:hover {
+      background: #316ad5;
+    }
+
+    .label {
+      margin-top: 5px;
+      font-size: 14px;
+      color: #1a4ca0;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📸 We Are Byttes 💙</h1>
+
+    <div class="video-wrapper">
+      <video autoplay id="video"></video>
+      <div id="countdown"></div>
+    </div>
+
+    <div class="controls">
+      <input type="number" min="0" placeholder="Timer (Sec)" id="timer" />
+      <select id="filter">
+        <option value="none">Normal</option>
+        <option value="grayscale(100%)">Grayscale</option>
+        <option value="sepia(100%)">Sepia</option>
+        <option value="invert(100%)">Invert</option>
+        <option value="blur(3px)">Blur</option>
+        <option value="contrast(150%)">High Contrast</option>
+        <option value="brightness(130%)">Bright</option>
+        <option value="hue-rotate(90deg)">Hue Rotate</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:5px;">
+        <input type="checkbox" id="mirror"> Mirror Selfie
+      </label>
+      <label style="display:flex;align-items:center;gap:5px;">
+        🎨 <span>Pilih warna frame:</span>
+        <input type="color" id="frameColor" value="#ffffff" />
+        <div id="framePreview"></div>
+      </label>
+      <button id="capture-btn">Capture</button>
+      <button id="make-strip-btn">Buat PhotoStrip</button>
+      <button id="reset-btn" style="background:#c0392b;">Ulang Foto</button>
+    </div>
+
+    <div id="photos"></div>
+  </div>
+
+  <script>
+    var video = document.getElementById("video");
+    var captureBtn = document.getElementById("capture-btn");
+    var makeStripBtn = document.getElementById("make-strip-btn");
+    var resetBtn = document.getElementById("reset-btn");
+    var photosContainer = document.getElementById("photos");
+    var timerInput = document.getElementById("timer");
+    var filterSelect = document.getElementById("filter");
+    var mirrorCheckbox = document.getElementById("mirror");
+    var countdownDisplay = document.getElementById("countdown");
+    var frameColorInput = document.getElementById("frameColor");
+    var framePreview = document.getElementById("framePreview");
+
+    var capturedPhotos = [];
+
+    // Preview warna frame real-time
+    frameColorInput.addEventListener("input", () => {
+      framePreview.style.backgroundColor = frameColorInput.value;
+    });
+    framePreview.style.backgroundColor = frameColorInput.value;
+
+    // Akses kamera
+    navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+      video.srcObject = stream;
+    });
+
+    // Terapkan filter
+    filterSelect.addEventListener("change", () => {
+      video.style.filter = filterSelect.value;
+    });
+
+    // Efek mirror langsung ke video
+    mirrorCheckbox.addEventListener("change", () => {
+      video.style.transform = mirrorCheckbox.checked ? "scaleX(-1)" : "scaleX(1)";
+    });
+
+    // Tombol capture
+    captureBtn.addEventListener("click", () => {
+      var timerValue = parseInt(timerInput.value) || 0;
+
+      if (timerValue > 0) {
+        captureBtn.disabled = true;
+        countdownDisplay.style.display = "block";
+        countdownDisplay.textContent = timerValue;
+
+        var countdown = setInterval(() => {
+          timerValue--;
+          if (timerValue > 0) {
+            countdownDisplay.textContent = timerValue;
+          } else {
+            clearInterval(countdown);
+            countdownDisplay.style.display = "none";
+            captureBtn.disabled = false;
+            capturePhoto();
+          }
+        }, 1000);
+      } else {
+        capturePhoto();
+      }
+    });
+
+    // Fungsi capture foto
+    function capturePhoto() {
+      var canvas = document.createElement("canvas");
+      var context = canvas.getContext("2d");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      if (mirrorCheckbox.checked) {
+        context.translate(canvas.width, 0);
+        context.scale(-1, 1);
+      }
+
+      context.filter = filterSelect.value;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      var dataURL = canvas.toDataURL("image/png");
+
+      capturedPhotos.push(dataURL);
+
+      var photoDiv = document.createElement("div");
+      photoDiv.classList.add("photo");
+
+      var img = document.createElement("img");
+      img.src = dataURL;
+      photoDiv.appendChild(img);
+
+      var label = document.createElement("div");
+      label.classList.add("label");
+      label.textContent = "We Are Byttes 💙";
+      photoDiv.appendChild(label);
+
+      var downloadBtn = document.createElement("button");
+      downloadBtn.textContent = "Download";
+      downloadBtn.addEventListener("click", () => {
+        var a = document.createElement("a");
+        a.href = dataURL;
+        a.download = "WeAreByttes.png";
+        a.click();
+      });
+
+      var deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Hapus Foto";
+      deleteBtn.style.background = "#c0392b";
+      deleteBtn.addEventListener("click", () => {
+        photosContainer.removeChild(photoDiv);
+        capturedPhotos = capturedPhotos.filter((p) => p !== dataURL);
+      });
+
+      photoDiv.appendChild(downloadBtn);
+      photoDiv.appendChild(deleteBtn);
+      photosContainer.appendChild(photoDiv);
+    }
+
+    // Tombol buat photostrip
+    makeStripBtn.addEventListener("click", () => {
+      if (capturedPhotos.length === 0) {
+        alert("Belum ada foto diambil!");
+        return;
+      }
+
+      var stripCount = capturedPhotos.length;
+      var img = new Image();
+      img.src = capturedPhotos[0];
+      var frameColor = frameColorInput.value;
+
+      img.onload = () => {
+        var width = img.width;
+        var height = img.height;
+        var gap = 20;
+        var sideMargin = 40;
+        var topMargin = 40;
+        var bottomMargin = 80;
+
+        var stripCanvas = document.createElement("canvas");
+        var stripContext = stripCanvas.getContext("2d");
+
+        stripCanvas.width = width + sideMargin * 2;
+        stripCanvas.height = topMargin + stripCount * (height + gap) + bottomMargin;
+
+        stripContext.fillStyle = frameColor;
+        stripContext.fillRect(0, 0, stripCanvas.width, stripCanvas.height);
+
+        capturedPhotos.forEach((photo, index) => {
+          var imgEach = new Image();
+          imgEach.src = photo;
+          stripContext.drawImage(imgEach, sideMargin, topMargin + index * (height + gap), width, height);
+        });
+
+        stripContext.fillStyle = "#1a4ca0";
+        stripContext.font = "bold 40px Poppins";
+        stripContext.textAlign = "center";
+        stripContext.fillText("We Are Byttes 💙", stripCanvas.width / 2, stripCanvas.height - 30);
+
+        var stripURL = stripCanvas.toDataURL("image/png");
+
+        var stripDiv = document.createElement("div");
+        stripDiv.classList.add("photo");
+
+        var stripImg = document.createElement("img");
+        stripImg.src = stripURL;
+        stripDiv.appendChild(stripImg);
+
+        var downloadStripBtn = document.createElement("button");
+        downloadStripBtn.textContent = "Download PhotoStrip";
+        downloadStripBtn.addEventListener("click", () => {
+          var a = document.createElement("a");
+          a.href = stripURL;
+          a.download = "WeAreByttes-PhotoStrip.png";
+          a.click();
+        });
+
+        stripDiv.appendChild(downloadStripBtn);
+        photosContainer.appendChild(stripDiv);
+      };
+    });
+
+    // Tombol reset semua foto
+    resetBtn.addEventListener("click", () => {
+      if (confirm("Yakin mau hapus semua foto?")) {
+        capturedPhotos = [];
+        photosContainer.innerHTML = "";
+      }
+    });
+  </script>
+</body>
+</html>
